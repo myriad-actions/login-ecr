@@ -1,0 +1,34 @@
+name: 'launch ec2 instance'
+description: > 
+  login to ecr for the pull and/or push of docker images
+  following permissions are required
+    permissions:
+      id-token: write
+      contents: read
+inputs:
+  config-path:
+    description: >-
+      path to the ec2.yml file which stores the parameters for the instance creation
+    required: true
+    
+outputs:
+  registry:
+    description: 'The URI of the ECR registry i.e. aws_account_id.dkr.ecr.region.amazonaws.com. If multiple registries are provided as inputs, this output will not be set.'
+    value: ${{ steps.login-ecr.outputs.registry }}
+        
+runs:
+  using: "composite"
+  steps:  
+    - name: load variables
+      id: load-vars
+      uses: myriad-actions/load-variables@v1
+      with:
+        config-path: ${{ inputs.config-path }}
+    - name: Configure AWS credentials 
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        role-to-assume: ${{ fromJson(steps.load-vars.outputs.vars).role-to-assume }}
+        aws-region: ${{ fromJson(steps.load-vars.outputs.vars).aws-region }}
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
